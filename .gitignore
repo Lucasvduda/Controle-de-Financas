@@ -1,0 +1,28 @@
+# Build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# H2 Database files
+data/
+
+# Sensitive config
+src/main/resources/application.properties
+
+# Logs
+*.log
+logs/

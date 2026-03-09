@@ -1,0 +1,9 @@
+package com.gastos.repository;
+
+import com.gastos.model.ConfiguracaoFinanceira;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ConfiguracaoFinanceiraRepository extends JpaRepository<ConfiguracaoFinanceira, Long> {
+}

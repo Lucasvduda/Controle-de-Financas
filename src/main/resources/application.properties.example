@@ -1,0 +1,29 @@
+server.port=8080
+
+# H2 Database - dados persistem em arquivo
+spring.datasource.url=jdbc:h2:file:./data/gastosdb;AUTO_SERVER=TRUE
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# JSON date format
+spring.jackson.date-format=yyyy-MM-dd
+spring.jackson.serialization.write-dates-as-timestamps=false
+
+# Email (configurar com seus dados)
+# Para Gmail: ative verificacao em 2 etapas e gere uma Senha de App em:
+# https://myaccount.google.com/apppasswords
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=SEU_EMAIL@gmail.com
+spring.mail.password=SUA_SENHA_DE_APP
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Configuracoes do app
+app.taxa-rendimento=0.009
+app.alerta.dias-antes-vencimento=3
+app.alerta.email-destino=SEU_EMAIL@gmail.com

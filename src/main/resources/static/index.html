@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador Financeiro</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>FinControl</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+            <li><a href="#" class="nav-link" data-page="cartoes">Cartões de Crédito</a></li>
+            <li><a href="#" class="nav-link" data-page="gastos">Gastos</a></li>
+            <li><a href="#" class="nav-link" data-page="contas">Contas a Pagar</a></li>
+            <li><a href="#" class="nav-link" data-page="investimentos">Investimentos</a></li>
+            <li><a href="#" class="nav-link" data-page="objetivos">Objetivos</a></li>
+            <li><a href="#" class="nav-link" data-page="projecao">Projeção</a></li>
+            <li><a href="#" class="nav-link" data-page="configuracoes">Configurações</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <h1 id="pageTitle">Dashboard</h1>
+            <div class="top-actions">
+                <span class="badge-alert" id="alertBadge" title="Contas próximas do vencimento">0</span>
+            </div>
+        </header>
+
+        <div class="content" id="content">
+            <!-- Pages loaded dynamically -->
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
