@@ -42,6 +42,11 @@ async function api(path, method = 'GET', body = null) {
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(API + path, opts);
     if (res.status === 204) return null;
+    if (!res.ok) {
+        const erro = await res.json().catch(() => null);
+        const msg = erro?.message || erro?.errors?.map(e => e.defaultMessage).join(', ') || `Erro ${res.status}`;
+        throw new Error(msg);
+    }
     return res.json();
 }
 
@@ -241,18 +246,25 @@ function modalNovoCartao() {
 }
 
 async function salvarCartao() {
+    const nome = document.getElementById('fCartaoNome').value.trim();
+    if (!nome) return toast('Preencha o nome do cartão', 'error');
+
     const data = {
-        nome: document.getElementById('fCartaoNome').value,
+        nome,
         bandeira: document.getElementById('fCartaoBandeira').value,
         limiteTotal: parseFloat(document.getElementById('fCartaoLimite').value) || 0,
         diaFechamento: parseInt(document.getElementById('fCartaoFecha').value) || 1,
         diaVencimento: parseInt(document.getElementById('fCartaoVence').value) || 10,
         cor: document.getElementById('fCartaoCor').value
     };
-    await api('/api/cartoes', 'POST', data);
-    fecharModal();
-    toast('Cartão criado!');
-    loadCartoes(document.getElementById('content'));
+    try {
+        await api('/api/cartoes', 'POST', data);
+        fecharModal();
+        toast('Cartão criado!');
+        loadCartoes(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar cartão: ' + e.message, 'error');
+    }
 }
 
 async function deletarCartao(id) {
@@ -304,22 +316,31 @@ function modalGastoCartao(cartaoId) {
 }
 
 async function salvarGastoCartao(cartaoId) {
-    const parc = parseInt(document.getElementById('fGCParcelas').value) || 1;
+    const descricao = document.getElementById('fGCDesc').value.trim();
     const valorTotal = parseFloat(document.getElementById('fGCValor').value) || 0;
+
+    if (!descricao) return toast('Preencha a descrição', 'error');
+    if (valorTotal <= 0) return toast('Informe um valor válido', 'error');
+
+    const parc = parseInt(document.getElementById('fGCParcelas').value) || 1;
     const valorParcela = valorTotal / parc;
     const data = {
-        descricao: document.getElementById('fGCDesc').value,
+        descricao,
         valor: Math.round(valorParcela * 100) / 100,
-        categoria: document.getElementById('fGCCat').value,
+        categoria: document.getElementById('fGCCat').value || null,
         tipo: 'VARIAVEL',
         parcelas: parc,
         parcelaAtual: 1,
         dataGasto: document.getElementById('fGCData').value || null
     };
-    await api(`/api/cartoes/${cartaoId}/gastos`, 'POST', data);
-    fecharModal();
-    toast('Gasto adicionado ao cartão!');
-    loadCartoes(document.getElementById('content'));
+    try {
+        await api(`/api/cartoes/${cartaoId}/gastos`, 'POST', data);
+        fecharModal();
+        toast('Gasto adicionado ao cartão!');
+        loadCartoes(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar gasto: ' + e.message, 'error');
+    }
 }
 
 // ==================== GASTOS ====================
@@ -396,17 +417,27 @@ function modalNovoGasto(tipo) {
 }
 
 async function salvarGasto() {
+    const descricao = document.getElementById('fGDesc').value.trim();
+    const valor = parseFloat(document.getElementById('fGValor').value) || 0;
+
+    if (!descricao) return toast('Preencha a descrição', 'error');
+    if (valor <= 0) return toast('Informe um valor válido', 'error');
+
     const data = {
-        descricao: document.getElementById('fGDesc').value,
-        valor: parseFloat(document.getElementById('fGValor').value) || 0,
-        categoria: document.getElementById('fGCat').value,
+        descricao,
+        valor,
+        categoria: document.getElementById('fGCat').value || null,
         tipo: document.getElementById('fGTipo').value,
         dataGasto: document.getElementById('fGData').value || null
     };
-    await api('/api/gastos', 'POST', data);
-    fecharModal();
-    toast('Gasto adicionado!');
-    loadGastos(document.getElementById('content'));
+    try {
+        await api('/api/gastos', 'POST', data);
+        fecharModal();
+        toast('Gasto adicionado!');
+        loadGastos(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar gasto: ' + e.message, 'error');
+    }
 }
 
 async function deletarGasto(id) {
@@ -419,7 +450,13 @@ async function deletarGasto(id) {
 // ==================== CONTAS A PAGAR ====================
 async function loadContas(c) {
     c.innerHTML = '<p>Carregando...</p>';
-    const contas = await api('/api/contas');
+    let contas;
+    try {
+        contas = await api('/api/contas');
+    } catch (e) {
+        c.innerHTML = '<div class="empty-state"><p>Erro ao carregar contas: ' + e.message + '</p></div>';
+        return;
+    }
     const pendentes = contas.filter(ct => !ct.paga).sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
     const pagas = contas.filter(ct => ct.paga);
     const hoje = new Date().toISOString().split('T')[0];
@@ -498,31 +535,51 @@ function modalNovaConta() {
 }
 
 async function salvarConta() {
+    const descricao = document.getElementById('fCtDesc').value.trim();
+    const valor = parseFloat(document.getElementById('fCtValor').value) || 0;
+    const dataVencimento = document.getElementById('fCtData').value;
+
+    if (!descricao) return toast('Preencha a descrição', 'error');
+    if (valor <= 0) return toast('Informe um valor válido', 'error');
+    if (!dataVencimento) return toast('Selecione a data de vencimento', 'error');
+
     const data = {
-        descricao: document.getElementById('fCtDesc').value,
-        valor: parseFloat(document.getElementById('fCtValor').value) || 0,
-        dataVencimento: document.getElementById('fCtData').value,
-        categoria: document.getElementById('fCtCat').value,
+        descricao,
+        valor,
+        dataVencimento,
+        categoria: document.getElementById('fCtCat').value || null,
         recorrente: document.getElementById('fCtRecorrente').checked,
         observacao: document.getElementById('fCtObs').value
     };
-    await api('/api/contas', 'POST', data);
-    fecharModal();
-    toast('Conta adicionada!');
-    loadContas(document.getElementById('content'));
+    try {
+        await api('/api/contas', 'POST', data);
+        fecharModal();
+        toast('Conta adicionada!');
+        loadContas(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar conta: ' + e.message, 'error');
+    }
 }
 
 async function pagarConta(id) {
-    await api(`/api/contas/${id}/pagar`, 'PATCH');
-    toast('Conta marcada como paga!');
-    loadContas(document.getElementById('content'));
+    try {
+        await api(`/api/contas/${id}/pagar`, 'PATCH');
+        toast('Conta marcada como paga!');
+        loadContas(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao pagar conta: ' + e.message, 'error');
+    }
 }
 
 async function deletarConta(id) {
     if (!confirm('Excluir esta conta?')) return;
-    await api(`/api/contas/${id}`, 'DELETE');
-    toast('Conta excluída!');
-    loadContas(document.getElementById('content'));
+    try {
+        await api(`/api/contas/${id}`, 'DELETE');
+        toast('Conta excluída!');
+        loadContas(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao excluir conta: ' + e.message, 'error');
+    }
 }
 
 async function enviarAlertas() {
@@ -592,17 +649,27 @@ function modalNovoInvestimento() {
 }
 
 async function salvarInvestimento() {
+    const nome = document.getElementById('fInvNome').value.trim();
+    const valor = parseFloat(document.getElementById('fInvValor').value) || 0;
+
+    if (!nome) return toast('Preencha o nome', 'error');
+    if (valor <= 0) return toast('Informe um valor válido', 'error');
+
     const data = {
-        nome: document.getElementById('fInvNome').value,
+        nome,
         tipo: document.getElementById('fInvTipo').value,
-        valorAplicado: parseFloat(document.getElementById('fInvValor').value) || 0,
+        valorAplicado: valor,
         taxaRendimentoMensal: (parseFloat(document.getElementById('fInvTaxa').value) || 0.9) / 100,
         dataAplicacao: document.getElementById('fInvData').value || null
     };
-    await api('/api/investimentos', 'POST', data);
-    fecharModal();
-    toast('Investimento adicionado!');
-    loadInvestimentos(document.getElementById('content'));
+    try {
+        await api('/api/investimentos', 'POST', data);
+        fecharModal();
+        toast('Investimento adicionado!');
+        loadInvestimentos(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar investimento: ' + e.message, 'error');
+    }
 }
 
 async function deletarInvestimento(id) {
@@ -664,16 +731,26 @@ function modalNovoObjetivo() {
 }
 
 async function salvarObjetivo() {
+    const nome = document.getElementById('fObjNome').value.trim();
+    const valorMeta = parseFloat(document.getElementById('fObjMeta').value) || 0;
+
+    if (!nome) return toast('Preencha o nome do objetivo', 'error');
+    if (valorMeta <= 0) return toast('Informe o valor da meta', 'error');
+
     const data = {
-        nome: document.getElementById('fObjNome').value,
-        valorMeta: parseFloat(document.getElementById('fObjMeta').value) || 0,
+        nome,
+        valorMeta,
         economiaMensal: parseFloat(document.getElementById('fObjEco').value) || 0,
         icone: document.getElementById('fObjIcone').value
     };
-    await api('/api/objetivos', 'POST', data);
-    fecharModal();
-    toast('Objetivo criado!');
-    loadObjetivos(document.getElementById('content'));
+    try {
+        await api('/api/objetivos', 'POST', data);
+        fecharModal();
+        toast('Objetivo criado!');
+        loadObjetivos(document.getElementById('content'));
+    } catch (e) {
+        toast('Erro ao salvar objetivo: ' + e.message, 'error');
+    }
 }
 
 async function depositarObjetivo(id) {
