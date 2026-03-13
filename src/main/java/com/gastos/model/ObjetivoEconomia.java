@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * Entidade que representa um objetivo de economia (ex: "Viagem", "Carro").
+ * O usuário define valor meta e quanto pretende economizar por mês; o sistema calcula percentual e meses restantes.
+ */
 @Entity
 @Table(name = "objetivos_economia")
 public class ObjetivoEconomia {
@@ -17,15 +21,15 @@ public class ObjetivoEconomia {
     private String nome;
 
     @Column(name = "valor_meta", precision = 12, scale = 2)
-    private BigDecimal valorMeta = BigDecimal.ZERO;
+    private BigDecimal valorMeta = BigDecimal.ZERO;  // Quanto quer juntar no total
 
     @Column(name = "valor_atual", precision = 12, scale = 2)
-    private BigDecimal valorAtual = BigDecimal.ZERO;
+    private BigDecimal valorAtual = BigDecimal.ZERO;  // Quanto já juntou (atualizado quando "deposita")
 
     @Column(name = "economia_mensal", precision = 12, scale = 2)
-    private BigDecimal economiaMensal = BigDecimal.ZERO;
+    private BigDecimal economiaMensal = BigDecimal.ZERO;  // Quanto pretende guardar por mês
 
-    private String icone;
+    private String icone;  // Emoji ou ícone para exibir na tela (ex: "🎯")
 
     public ObjetivoEconomia() {}
 
@@ -42,6 +46,7 @@ public class ObjetivoEconomia {
     public String getIcone() { return icone; }
     public void setIcone(String icone) { this.icone = icone; }
 
+    /** Percentual já alcançado (valorAtual / valorMeta * 100). Retorna 0 se meta for zero. */
     @Transient
     public BigDecimal getPercentualConcluido() {
         if (valorMeta.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
@@ -49,11 +54,12 @@ public class ObjetivoEconomia {
                 .multiply(new BigDecimal("100"));
     }
 
+    /** Quantos meses faltam para atingir a meta (falta / economiaMensal). Retorna -1 se economia mensal <= 0, 0 se já atingiu. */
     @Transient
     public int getMesesRestantes() {
         if (economiaMensal.compareTo(BigDecimal.ZERO) <= 0) return -1;
         BigDecimal falta = valorMeta.subtract(valorAtual);
         if (falta.compareTo(BigDecimal.ZERO) <= 0) return 0;
-        return falta.divide(economiaMensal, 0, RoundingMode.CEILING).intValue();
+        return falta.divide(economiaMensal, 0, RoundingMode.CEILING).intValue();  // CEILING = arredonda pra cima
     }
 }

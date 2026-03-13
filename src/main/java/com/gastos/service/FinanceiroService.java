@@ -12,7 +12,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
+/**
+ * Serviço que concentra a lógica financeira: montagem do dashboard, projeção, resumo de cartão e configuração.
+ * Usa os repositórios para buscar dados e aplica as regras de negócio (cálculos, formatação).
+ */
+@Service  // Spring gerencia esta classe como um "bean" e injeta nos controllers que precisarem
 public class FinanceiroService {
 
     private final GastoRepository gastoRepository;
@@ -21,6 +25,7 @@ public class FinanceiroService {
     private final ConfiguracaoFinanceiraRepository configRepository;
     private final CartaoCreditoRepository cartaoRepository;
 
+    /** Taxa de rendimento mensal padrão (0,9% = 0.009). Usada quando não há taxa por investimento */
     private static final BigDecimal TAXA_RENDIMENTO = new BigDecimal("0.009");
 
     public FinanceiroService(GastoRepository gastoRepository,
@@ -35,6 +40,10 @@ public class FinanceiroService {
         this.cartaoRepository = cartaoRepository;
     }
 
+    /**
+     * Monta o resumo completo do dashboard: salário, investimentos, gastos, saldo mensal,
+     * tempo até o dinheiro acabar, contas a vencer e gastos por categoria.
+     */
     public DashboardResumo getDashboard() {
         DashboardResumo resumo = new DashboardResumo();
         ConfiguracaoFinanceira config = getConfig();
@@ -42,7 +51,7 @@ public class FinanceiroService {
         BigDecimal salario = config.getSalario();
         BigDecimal totalInvestimentos = investimentoRepository.somarTotal();
         BigDecimal rendimentoMensal = totalInvestimentos.multiply(TAXA_RENDIMENTO)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(2, RoundingMode.HALF_UP);  // Arredonda para 2 casas decimais
         BigDecimal totalFixos = gastoRepository.somarPorTipo(TipoGasto.FIXO);
         BigDecimal totalVariaveis = gastoRepository.somarPorTipo(TipoGasto.VARIAVEL);
         BigDecimal totalGastos = totalFixos.add(totalVariaveis);
@@ -60,6 +69,7 @@ public class FinanceiroService {
         LocalDate hoje = LocalDate.now();
         LocalDate semana = hoje.plusDays(7);
 
+        // Quantidade de contas que vencem hoje, esta semana e já atrasadas
         resumo.setContasVencendoHoje(
                 contaPagarRepository.findByDataVencimentoAndPagaFalse(hoje).size());
         resumo.setContasVencendoSemana(
@@ -67,6 +77,7 @@ public class FinanceiroService {
         resumo.setContasAtrasadas(
                 contaPagarRepository.findByDataVencimentoBeforeAndPagaFalse(hoje).size());
 
+        // Mapa categoria -> soma dos valores (para o gráfico de gastos por categoria)
         Map<String, BigDecimal> gastosPorCat = new LinkedHashMap<>();
         for (Object[] row : gastoRepository.somarPorCategoria()) {
             CategoriaGasto cat = (CategoriaGasto) row[0];
@@ -75,6 +86,7 @@ public class FinanceiroService {
         }
         resumo.setGastosPorCategoria(gastosPorCat);
 
+        // Lista das 10 próximas contas pendentes, com status (ATRASADA, VENCE_HOJE, PROXIMA, NORMAL)
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         List<DashboardResumo.ContaAlerta> alertas = contaPagarRepository
                 .findByPagaFalseOrderByDataVencimentoAsc()
@@ -103,6 +115,10 @@ public class FinanceiroService {
         return resumo;
     }
 
+    /**
+     * Monta a projeção financeira mês a mês: para cada mês, calcula saldo inicial + rendimento + salário - gastos = saldo final.
+     * Para quando o saldo ficar negativo ou após N meses.
+     */
     public ProjecaoFinanceira getProjecao(int meses) {
         ConfiguracaoFinanceira config = getConfig();
         ProjecaoFinanceira projecao = new ProjecaoFinanceira();
@@ -138,13 +154,14 @@ public class FinanceiroService {
             saldo = saldo.add(rendimento).add(salario).subtract(totalGastos);
             String label = nomeMeses[mesFuturo.getMonthValue()] + "/" + mesFuturo.getYear();
             listaMeses.add(new ProjecaoMes(i, label, saldoInicio, rendimento, salario, totalGastos, saldo));
-            if (saldo.compareTo(BigDecimal.ZERO) < 0) break;
+            if (saldo.compareTo(BigDecimal.ZERO) < 0) break;  // Para se ficar negativo
         }
         projecao.setProjecaoMeses(listaMeses);
 
         return projecao;
     }
 
+    /** Monta o resumo de um cartão (dados do cartão + lista de gastos em formato simples para o frontend) */
     public ResumoCartao getResumoCartao(Long cartaoId) {
         CartaoCredito cartao = cartaoRepository.findById(cartaoId)
                 .orElseThrow(() -> new RuntimeException("Cartão não encontrado"));
@@ -155,7 +172,7 @@ public class FinanceiroService {
         resumo.setBandeira(cartao.getBandeira());
         resumo.setCor(cartao.getCor());
         resumo.setLimiteTotal(cartao.getLimiteTotal());
-        resumo.setLimiteUsado(cartao.getLimiteUsado());
+        resumo.setLimiteUsado(cartao.getLimiteUsado());   // Método @Transient que soma os gastos
         resumo.setLimiteDisponivel(cartao.getLimiteDisponivel());
         resumo.setDiaFechamento(cartao.getDiaFechamento());
         resumo.setDiaVencimento(cartao.getDiaVencimento());
@@ -179,6 +196,10 @@ public class FinanceiroService {
         return resumo;
     }
 
+    /**
+     * Simula mês a mês até o saldo zerar (ou 1200 meses = 100 anos) e retorna texto tipo "2 anos e 3 meses".
+     * Se o saldo mensal já for positivo, retorna "Sustentável - Patrimônio crescendo!".
+     */
     private String calcularTempoRestante(BigDecimal salario, BigDecimal investimentos, BigDecimal totalGastos) {
         BigDecimal rendimentoMensal = investimentos.multiply(TAXA_RENDIMENTO)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -208,6 +229,7 @@ public class FinanceiroService {
         return meses + " mes" + (meses != 1 ? "es" : "");
     }
 
+    /** Retorna a configuração única. Se não existir nenhuma, cria uma nova e salva (primeira vez) */
     public ConfiguracaoFinanceira getConfig() {
         List<ConfiguracaoFinanceira> configs = configRepository.findAll();
         if (configs.isEmpty()) {
@@ -217,6 +239,7 @@ public class FinanceiroService {
         return configs.get(0);
     }
 
+    /** Atualiza a configuração (sempre altera o registro existente, não cria outro) */
     public ConfiguracaoFinanceira salvarConfig(ConfiguracaoFinanceira config) {
         ConfiguracaoFinanceira existente = getConfig();
         existente.setSalario(config.getSalario());

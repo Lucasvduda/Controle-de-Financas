@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * Entidade que representa uma conta a pagar (luz, água, aluguel, etc.) com data de vencimento.
+ * Usada para listar contas pendentes, marcar como paga e enviar alertas por e-mail quando está perto do vencimento.
+ */
 @Entity
 @Table(name = "contas_pagar")
 public class ContaPagar {
@@ -15,7 +19,7 @@ public class ContaPagar {
     private Long id;
 
     @NotBlank(message = "Descrição é obrigatória")
-    private String descricao;
+    private String descricao;  // Ex: "Conta de Luz - Março"
 
     @NotNull(message = "Valor é obrigatório")
     @Column(precision = 12, scale = 2)
@@ -23,22 +27,22 @@ public class ContaPagar {
 
     @NotNull(message = "Data de vencimento é obrigatória")
     @Column(name = "data_vencimento")
-    private LocalDate dataVencimento;
+    private LocalDate dataVencimento;  // Dia em que a conta vence
 
     @Enumerated(EnumType.STRING)
     private CategoriaGasto categoria;
 
-    private boolean paga = false;
+    private boolean paga = false;  // true quando o usuário marca "Pagar"
 
     @Column(name = "data_pagamento")
-    private LocalDate dataPagamento;
+    private LocalDate dataPagamento;  // Preenchido quando paga = true
 
-    private boolean recorrente = false;
+    private boolean recorrente = false;  // Se true, ao marcar como paga o sistema cria outra conta para o mês seguinte
 
     @Column(name = "alerta_enviado")
-    private boolean alertaEnviado = false;
+    private boolean alertaEnviado = false;  // Evita enviar o mesmo alerta por e-mail mais de uma vez
 
-    private String observacao;
+    private String observacao;  // Notas livres do usuário
 
     public ContaPagar() {}
 

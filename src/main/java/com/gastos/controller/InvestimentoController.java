@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** Controller de investimentos. CRUD completo: listar, criar, atualizar, deletar */
 @RestController
 @RequestMapping("/api/investimentos")
 public class InvestimentoController {

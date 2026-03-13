@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+/** DTO com todos os dados exibidos na tela inicial: salário, totais, contas a vencer, gastos por categoria */
 public class DashboardResumo {
 
     private BigDecimal salario;

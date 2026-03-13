@@ -3,6 +3,7 @@ package com.gastos.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+/** DTO do detalhe do cartão: dados do cartão + lista de gastos em formato simples (evita referência circular no JSON) */
 public class ResumoCartao {
 
     private Long id;

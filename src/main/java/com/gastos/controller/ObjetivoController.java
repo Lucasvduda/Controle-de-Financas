@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+/** Controller de objetivos de economia. Inclui endpoint para "depositar" valor no objetivo (aumentar valorAtual) */
 @RestController
 @RequestMapping("/api/objetivos")
 public class ObjetivoController {
@@ -42,12 +43,13 @@ public class ObjetivoController {
         return ResponseEntity.ok(objetivoRepository.save(existente));
     }
 
+    /** PATCH /api/objetivos/1/depositar?valor=100 - Adiciona o valor ao valorAtual do objetivo (ex: "depositei R$ 100 na meta") */
     @PatchMapping("/{id}/depositar")
     public ResponseEntity<ObjetivoEconomia> depositar(@PathVariable Long id,
-                                                      @RequestParam BigDecimal valor) {
+                                                      @RequestParam BigDecimal valor) {  // valor vem na URL: ?valor=100.50
         ObjetivoEconomia objetivo = objetivoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Objetivo não encontrado"));
-        objetivo.setValorAtual(objetivo.getValorAtual().add(valor));
+        objetivo.setValorAtual(objetivo.getValorAtual().add(valor));  // Soma o valor depositado ao que já tinha
         return ResponseEntity.ok(objetivoRepository.save(objetivo));
     }
 

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ConfiguracaoFinanceiraRepository extends JpaRepository<ConfiguracaoFinanceira, Long> {
+    // Em geral existe só uma configuração (id=1). O service busca findAll().get(0) ou cria uma nova se vazio.
 }

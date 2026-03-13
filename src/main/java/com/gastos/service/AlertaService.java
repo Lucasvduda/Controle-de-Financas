@@ -15,14 +15,19 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Serviço responsável por enviar alertas de contas a vencer por e-mail.
+ * Roda automaticamente todo dia às 8h (@Scheduled) e pode ser disparado manualmente pelo endpoint POST /api/alertas/enviar.
+ */
 @Service
 public class AlertaService {
 
+    /** Logger para escrever mensagens no console/log (info, error) sem usar System.out.println */
     private static final Logger log = LoggerFactory.getLogger(AlertaService.class);
 
     private final ContaPagarRepository contaPagarRepository;
     private final FinanceiroService financeiroService;
-    private final JavaMailSender mailSender;
+    private final JavaMailSender mailSender;  // Injetado pelo Spring a partir da config de e-mail no application.properties
 
     public AlertaService(ContaPagarRepository contaPagarRepository,
                          FinanceiroService financeiroService,
@@ -32,7 +37,11 @@ public class AlertaService {
         this.mailSender = mailSender;
     }
 
-    @Scheduled(cron = "0 0 8 * * *") // todo dia às 8h
+    /**
+     * Tarefa agendada: executa todo dia às 8h da manhã.
+     * Cron "0 0 8 * * *" = segundo 0, minuto 0, hora 8, qualquer dia do mês, qualquer mês, qualquer dia da semana
+     */
+    @Scheduled(cron = "0 0 8 * * *")
     public void verificarContasVencendo() {
         ConfiguracaoFinanceira config = financeiroService.getConfig();
         if (!config.isAlertasEmailAtivos() || config.getEmailAlertas() == null) {
@@ -41,8 +50,9 @@ public class AlertaService {
         }
 
         LocalDate hoje = LocalDate.now();
-        LocalDate limite = hoje.plusDays(config.getDiasAntesAlerta());
+        LocalDate limite = hoje.plusDays(config.getDiasAntesAlerta());  // Ex: hoje + 3 = alertar contas que vencem nos próximos 3 dias
 
+        // Contas que vencem entre hoje e daqui a X dias, não pagas e para as quais ainda não enviamos alerta
         List<ContaPagar> contasProximas = contaPagarRepository
                 .findByAlertaEnviadoFalseAndPagaFalseAndDataVencimentoBetween(hoje, limite);
 
@@ -54,6 +64,7 @@ public class AlertaService {
             return;
         }
 
+        // Monta o texto do e-mail
         StringBuilder body = new StringBuilder();
         body.append("=== ALERTA DE CONTAS - Gerenciador de Gastos ===\n\n");
 
@@ -79,7 +90,7 @@ public class AlertaService {
                         conta.getDescricao(),
                         conta.getValor(),
                         conta.getDataVencimento().format(fmt)));
-                conta.setAlertaEnviado(true);
+                conta.setAlertaEnviado(true);  // Marca para não enviar de novo o mesmo alerta
             }
             body.append("\n");
         }
@@ -100,17 +111,19 @@ public class AlertaService {
             enviarEmail(config.getEmailAlertas(),
                     "Alerta de Contas - Gerenciador de Gastos",
                     body.toString());
-            contaPagarRepository.saveAll(contasProximas);
+            contaPagarRepository.saveAll(contasProximas);  // Persiste o alertaEnviado = true
             log.info("Alerta enviado com sucesso para {}", config.getEmailAlertas());
         } catch (Exception e) {
             log.error("Erro ao enviar alerta por email: {}", e.getMessage());
         }
     }
 
+    /** Chamado quando o usuário clica em "Enviar alertas" na tela - faz a mesma verificação na hora */
     public void enviarAlertaManual() {
         verificarContasVencendo();
     }
 
+    /** Envia um e-mail simples (destinatário, assunto, corpo em texto). Usa o JavaMailSender configurado no Spring */
     public void enviarEmail(String para, String assunto, String corpo) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(para);

@@ -3,6 +3,10 @@ package com.gastos.model;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
+/**
+ * Entidade de configuração global do sistema - em geral existe UMA só linha no banco.
+ * Guarda salário, e-mail e telefone para alertas, e se os alertas por e-mail estão ativos.
+ */
 @Entity
 @Table(name = "configuracao_financeira")
 public class ConfiguracaoFinanceira {
@@ -12,19 +16,19 @@ public class ConfiguracaoFinanceira {
     private Long id;
 
     @Column(precision = 12, scale = 2)
-    private BigDecimal salario = BigDecimal.ZERO;
+    private BigDecimal salario = BigDecimal.ZERO;  // Salário mensal usado na projeção e no dashboard
 
     @Column(name = "email_alertas")
-    private String emailAlertas;
+    private String emailAlertas;  // Para onde enviar os alertas de contas a vencer
 
     @Column(name = "telefone_alertas")
-    private String telefoneAlertas;
+    private String telefoneAlertas;  // Reservado para futuro (ex: WhatsApp)
 
     @Column(name = "dias_antes_alerta")
-    private int diasAntesAlerta = 3;
+    private int diasAntesAlerta = 3;  // Enviar alerta X dias antes do vencimento
 
     @Column(name = "alertas_email_ativos")
-    private boolean alertasEmailAtivos = true;
+    private boolean alertasEmailAtivos = true;  // Se false, o scheduler não envia e-mail
 
     public ConfiguracaoFinanceira() {}
 

@@ -3,6 +3,7 @@ package com.gastos.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+/** DTO da projeção: totais atuais + lista de ProjecaoMes (saldo mês a mês) + texto "tempo restante" */
 public class ProjecaoFinanceira {
 
     private BigDecimal saldoMensal;
